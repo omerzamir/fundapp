@@ -8,6 +8,7 @@ import (
 const WORKERS = 10
 
 func BenchmarkWithdrawals(b *testing.B) {
+
     // Skip N = 1
     if b.N < WORKERS {
         return
@@ -30,7 +31,7 @@ func BenchmarkWithdrawals(b *testing.B) {
         go func() {
             defer wg.Done()
             for i := 0; i < dollarsPerFounder; i++ {
-                server.Commands <- WithdrawCommand{ Amount: 1 }
+                server.Withdraw(1)
             }
         }()
     }
@@ -38,10 +39,8 @@ func BenchmarkWithdrawals(b *testing.B) {
 	// Wait for all the workers to finish
 	wg.Wait()
 
-	balanceResponseChan := make(chan int)
-    server.Commands <- BalanceCommand{ Response: balanceResponseChan }
-	balance := <- balanceResponseChan
-	
+	balance := server.Balance()
+
     if balance != 0 {
         b.Error("Balance wasn't zero:", balance)
     }

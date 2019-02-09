@@ -6,45 +6,54 @@ import (
 
 // FundServer is a server of Fund.
 type FundServer struct {
-    Commands chan interface{}
+    commands chan interface{}
     fund Fund
 }
 
-// WithdrawCommand is ...
-type WithdrawCommand struct {
+type withdrawCommand struct {
     Amount int
 }
 
-// BalanceCommand is ...
-type BalanceCommand struct {
+type balanceCommand struct {
     Response chan int
 }
-// NewFundServer is a Fund Server
+
+// Balance returnes the balance of the server's fund.
+func (s *FundServer) Balance() int {
+    responseChan := make(chan int)
+    s.commands <- balanceCommand{ Response: responseChan }
+    return <- responseChan
+}
+
+// Withdraw is decreasing amount from the balance of the server. 
+func (s *FundServer) Withdraw(amount int) {
+    s.commands <- withdrawCommand{ Amount: amount }
+}
+
+// NewFundServer returning Fund Server
 func NewFundServer(initialBalance int) *FundServer {
     server := &FundServer{
         // make() creates builtins like channels, maps, and slices
-        Commands: make(chan interface{}),
+        commands: make(chan interface{}),
         fund: *NewFund(initialBalance),
     }
 
-    // Spawn off the server's main loop immediately
-    go server.loop()
     return server
 }
 
 func (s *FundServer) loop() {
-	for command := range s.Commands {
+    for command := range s.commands {
 
         // command is just an interface{}, but we can check its real type
         switch command.(type) {
 
-        case WithdrawCommand:
+        case withdrawCommand:
             // And then use a "type assertion" to convert it
-            withdrawal := command.(WithdrawCommand)
+            withdrawal := command.(withdrawCommand)
             s.fund.Withdraw(withdrawal.Amount)
 
-        case BalanceCommand:
-            getBalance := command.(BalanceCommand)
+        case balanceCommand:
+            getBalance := command.(balanceCommand)
             balance := s.fund.Balance()
             getBalance.Response <- balance
 
